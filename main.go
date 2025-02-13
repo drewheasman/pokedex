@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -19,13 +20,13 @@ type pageConfig struct {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*pageConfig) error
+	callback    func(*pageConfig, []string) error
 }
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	paging := pageConfig{
-		Cache: *pokecache.NewCache(10_000 * time.Millisecond),
+		Cache: *pokecache.NewCache(60_000 * time.Millisecond),
 	}
 
 	for {
@@ -34,12 +35,15 @@ func main() {
 			panic("fatal while reading input!")
 		}
 
-		command := commands()[scanner.Text()]
+		inputFields := strings.Fields(scanner.Text())
+		command := commands()[inputFields[0]]
 		fmt.Println()
 		if command.callback == nil {
 			println("Unknown command")
 		} else {
-			command.callback(&paging)
+			if err := command.callback(&paging, inputFields[1:]); err != nil {
+				fmt.Println("error running command:", err)
+			}
 		}
 		fmt.Println()
 	}
@@ -76,17 +80,22 @@ func commands() map[string]cliCommand {
 			description: "Show the previous location areas",
 			callback:    commandMapBack,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Explore a location area",
+			callback:    commandExplore,
+		},
 	}
 }
 
-func commandExit(pageConfig *pageConfig) error {
+func commandExit(pageConfig *pageConfig, args []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandUsage(pageConfig *pageConfig) error {
-	fmt.Printf("Welcome to the Pokedex!\nUsage:\n")
+func commandUsage(pageConfig *pageConfig, args []string) error {
+	fmt.Printf("Welcome to the Pokedex!\n\nUsage:\n\n")
 	for _, c := range commands() {
 		fmt.Printf("%v: %v\n", c.name, c.description)
 	}
@@ -94,8 +103,8 @@ func commandUsage(pageConfig *pageConfig) error {
 	return nil
 }
 
-func commandMap(pageConfig *pageConfig) error {
-	areas, err := callLocationArea(Forward, pageConfig)
+func commandMap(pageConfig *pageConfig, args []string) error {
+	areas, err := callLocationAreas(Forward, pageConfig)
 	if err != nil {
 		return err
 	}
@@ -107,19 +116,36 @@ func commandMap(pageConfig *pageConfig) error {
 	return nil
 }
 
-func commandMapBack(pageConfig *pageConfig) error {
+func commandMapBack(pageConfig *pageConfig, args []string) error {
 	if len(pageConfig.PreviousUrl) == 0 {
 		fmt.Println("you're on the first page")
 		return nil
 	}
 
-	areas, err := callLocationArea(Back, pageConfig)
+	areas, err := callLocationAreas(Back, pageConfig)
 	if err != nil {
 		return err
 	}
 
 	for _, a := range areas {
 		fmt.Println(a)
+	}
+
+	return nil
+}
+
+func commandExplore(pageConfig *pageConfig, args []string) error {
+	if len(args) == 0 {
+		return errors.New("explore requires an area name!")
+	}
+
+	pokemonNames, err := callLocationAreaId(args[0], pageConfig)
+	if err != nil {
+		return err
+	}
+
+	for _, n := range pokemonNames {
+		fmt.Println(n)
 	}
 
 	return nil
