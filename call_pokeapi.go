@@ -3,8 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"net/url"
 )
 
 const baseUrl = "https://pokeapi.co/api/v2/"
@@ -29,40 +28,24 @@ const (
 func callLocationAreas(callType locationAreasCallType, pageConfig *pageConfig) ([]string, error) {
 	var areaNames []string
 
-	locationAreaUrl := baseUrl + "location-area"
+	locationAreaUrlString := baseUrl + "location-area"
 	if callType == Back {
 		if len(pageConfig.PreviousUrl) == 0 {
 			return areaNames, fmt.Errorf("locationAreasCallType Back, but no Back url")
 		}
-		locationAreaUrl = pageConfig.PreviousUrl
+		locationAreaUrlString = pageConfig.PreviousUrl
 	}
 	if callType == Forward {
 		if len(pageConfig.NextUrl) > 0 {
-			locationAreaUrl = pageConfig.NextUrl
+			locationAreaUrlString = pageConfig.NextUrl
 		}
 	}
 
-	var data []byte
-	if d, ok := pageConfig.Cache.Get(locationAreaUrl); ok {
-		data = d
-	} else {
-		resp, err := http.Get(locationAreaUrl)
-		if err != nil {
-			return areaNames, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return areaNames, fmt.Errorf("location-area response was not OK")
-		}
-
-		data, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return areaNames, fmt.Errorf("error reading location-area response")
-		}
-
-		pageConfig.Cache.Add(locationAreaUrl, data)
+	locationAreaUrl, err := url.Parse(locationAreaUrlString)
+	if err != nil {
+		return areaNames, fmt.Errorf("locationAreaUrl invalid")
 	}
+	data, err := cacheOrCall(&pageConfig.Cache, locationAreaUrl)
 
 	var respJson locationAreas
 	if err := json.Unmarshal(data, &respJson); err != nil {
@@ -134,29 +117,13 @@ type locationArea struct {
 func callLocationAreaId(id string, pageConfig *pageConfig) ([]string, error) {
 	var pokemonNames []string
 
-	locationAreaUrl := baseUrl + "location-area" + "/" + id
+	locationAreaUrlString := baseUrl + "location-area" + "/" + id
 
-	var data []byte
-	if d, ok := pageConfig.Cache.Get(locationAreaUrl); ok {
-		data = d
-	} else {
-		resp, err := http.Get(locationAreaUrl)
-		if err != nil {
-			return pokemonNames, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return pokemonNames, fmt.Errorf("location-area id response was not OK")
-		}
-
-		data, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return pokemonNames, fmt.Errorf("error reading location-area id response")
-		}
-
-		pageConfig.Cache.Add(locationAreaUrl, data)
+	locationAreaUrl, err := url.Parse(locationAreaUrlString)
+	if err != nil {
+		return pokemonNames, fmt.Errorf("locationAreaUrl invalid")
 	}
+	data, err := cacheOrCall(&pageConfig.Cache, locationAreaUrl)
 
 	var respJson locationArea
 	if err := json.Unmarshal(data, &respJson); err != nil {
