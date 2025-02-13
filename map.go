@@ -9,11 +9,6 @@ import (
 
 const baseUrl = "https://pokeapi.co/api/v2/"
 
-type pageConfig struct {
-	PreviousUrl string
-	NextUrl     string
-}
-
 type locationArea struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
@@ -47,19 +42,26 @@ func callLocationArea(callType callType, pageConfig *pageConfig) ([]string, erro
 		}
 	}
 
-	resp, err := http.Get(locationAreaUrl)
-	if err != nil {
-		return areaNames, err
-	}
-	defer resp.Body.Close()
+	var data []byte
+	if d, ok := pageConfig.Cache.Get(locationAreaUrl); ok {
+		data = d
+	} else {
+		resp, err := http.Get(locationAreaUrl)
+		if err != nil {
+			return areaNames, err
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return areaNames, fmt.Errorf("location-area response was not OK")
-	}
+		if resp.StatusCode != http.StatusOK {
+			return areaNames, fmt.Errorf("location-area response was not OK")
+		}
 
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return areaNames, fmt.Errorf("error reading location-area response")
+		data, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return areaNames, fmt.Errorf("error reading location-area response")
+		}
+
+		pageConfig.Cache.Add(locationAreaUrl, data)
 	}
 
 	var respJson locationArea

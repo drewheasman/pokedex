@@ -5,7 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/drewheasman/pokedexcli/internal/pokecache"
 )
+
+type pageConfig struct {
+	PreviousUrl string
+	NextUrl     string
+	Cache       pokecache.Cache
+}
 
 type cliCommand struct {
 	name        string
@@ -15,7 +24,10 @@ type cliCommand struct {
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	var paging pageConfig
+	paging := pageConfig{
+		Cache: *pokecache.NewCache(10_000 * time.Millisecond),
+	}
+
 	for {
 		fmt.Print("Pokedex > ")
 		if !scanner.Scan() {
@@ -74,9 +86,7 @@ func commandExit(pageConfig *pageConfig) error {
 }
 
 func commandUsage(pageConfig *pageConfig) error {
-	fmt.Println(`Welcome to the Pokedex!
-Usage:
-`)
+	fmt.Printf("Welcome to the Pokedex!\nUsage:\n")
 	for _, c := range commands() {
 		fmt.Printf("%v: %v\n", c.name, c.description)
 	}
