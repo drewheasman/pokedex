@@ -21,12 +21,12 @@ func cacheOrCall(cache *pokecache.Cache, url *url.URL) ([]byte, error) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return data, fmt.Errorf("location-area id response was not OK")
+			return data, fmt.Errorf(resp.Status)
 		}
 
 		data, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return data, fmt.Errorf("error reading location-area id response")
+			return data, fmt.Errorf("error reading response body")
 		}
 
 		cache.Add(url.String(), data)

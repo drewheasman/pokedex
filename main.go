@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ type pageConfig struct {
 	PreviousUrl string
 	NextUrl     string
 	Cache       pokecache.Cache
+	Pokedex     pokedex
 }
 
 type cliCommand struct {
@@ -23,11 +25,16 @@ type cliCommand struct {
 	callback    func(*pageConfig, []string) error
 }
 
+type pokedex struct {
+	caughtPokemon map[string]pokemon
+}
+
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	paging := pageConfig{
 		Cache: *pokecache.NewCache(60_000 * time.Millisecond),
 	}
+	paging.Pokedex.caughtPokemon = make(map[string]pokemon)
 
 	for {
 		fmt.Print("Pokedex > ")
@@ -84,6 +91,11 @@ func commands() map[string]cliCommand {
 			name:        "explore",
 			description: "Explore a location area",
 			callback:    commandExplore,
+		},
+		"catch": {
+			name:        "catch",
+			description: "Catch a pokémon",
+			callback:    commandCatch,
 		},
 	}
 }
@@ -146,6 +158,30 @@ func commandExplore(pageConfig *pageConfig, args []string) error {
 
 	for _, n := range pokemonNames {
 		fmt.Println(n)
+	}
+
+	return nil
+}
+
+func commandCatch(pageConfig *pageConfig, args []string) error {
+	if len(args) == 0 {
+		return errors.New("catch requires a pokémon name!")
+	}
+
+	pokemon, err := callPokemon(args[0], pageConfig)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Throwing a Pokéball at %v...\n", pokemon.Name)
+
+	randNum := rand.Float64()
+	catchThreshold := float64(pokemon.BaseExperience) / 400.0
+	if randNum < catchThreshold {
+		fmt.Printf("%v escaped!\n", pokemon.Name)
+	} else {
+		pageConfig.Pokedex.caughtPokemon[pokemon.Name] = pokemon
+		fmt.Printf("%v was caught!\n", pokemon.Name)
 	}
 
 	return nil
