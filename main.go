@@ -97,6 +97,11 @@ func commands() map[string]cliCommand {
 			description: "Catch a pokémon",
 			callback:    commandCatch,
 		},
+		"inspect": {
+			name:        "inspect",
+			description: "Inspect a pokémon you have caught",
+			callback:    commandInspect,
+		},
 	}
 }
 
@@ -173,7 +178,7 @@ func commandCatch(pageConfig *pageConfig, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Throwing a Pokéball at %v...\n", pokemon.Name)
+	fmt.Printf("throwing a poké ball at %v...\n", pokemon.Name)
 
 	randNum := rand.Float64()
 	catchThreshold := float64(pokemon.BaseExperience) / 400.0
@@ -182,6 +187,31 @@ func commandCatch(pageConfig *pageConfig, args []string) error {
 	} else {
 		pageConfig.Pokedex.caughtPokemon[pokemon.Name] = pokemon
 		fmt.Printf("%v was caught!\n", pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(pageConfig *pageConfig, args []string) error {
+	if len(args) == 0 {
+		return errors.New("catch requires a pokémon name!")
+	}
+
+	pokemon, ok := pageConfig.Pokedex.caughtPokemon[args[0]]
+	if !ok {
+		return fmt.Errorf("%v not found in your pokédex", args[0])
+	}
+
+	fmt.Println("Name:", pokemon.Name)
+	fmt.Println("Height:", pokemon.Height)
+	fmt.Println("Weight:", pokemon.Weight)
+	fmt.Println("Stats:")
+	for _, s := range pokemon.Stats {
+		fmt.Printf(" - %v: %v\n", s.Stat.Name, s.BaseStat+s.Effort)
+	}
+	fmt.Println("Types:")
+	for _, t := range pokemon.Types {
+		fmt.Printf(" - %v\n", t.Type.Name)
 	}
 
 	return nil
