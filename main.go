@@ -43,13 +43,17 @@ func main() {
 		}
 
 		inputFields := strings.Fields(scanner.Text())
+		if len(inputFields) == 0 {
+			continue
+		}
+
 		command := commands()[inputFields[0]]
 		fmt.Println()
 		if command.callback == nil {
 			println("Unknown command")
 		} else {
 			if err := command.callback(&paging, inputFields[1:]); err != nil {
-				fmt.Println("error running command:", err)
+				fmt.Println("error:", err)
 			}
 		}
 		fmt.Println()
@@ -102,6 +106,11 @@ func commands() map[string]cliCommand {
 			description: "Inspect a pokémon you have caught",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			name:        "pokedex",
+			description: "List the pokémon in your pokédex",
+			callback:    commandPokedex,
+		},
 	}
 }
 
@@ -130,6 +139,8 @@ func commandMap(pageConfig *pageConfig, args []string) error {
 		fmt.Println(a)
 	}
 
+	fmt.Println("\n'explore' an area, 'map' for the next page, or 'mapb' the previous page")
+
 	return nil
 }
 
@@ -148,6 +159,8 @@ func commandMapBack(pageConfig *pageConfig, args []string) error {
 		fmt.Println(a)
 	}
 
+	fmt.Println("\n'explore' an area, 'map' for the next page, or 'mapb' the previous page")
+
 	return nil
 }
 
@@ -164,6 +177,8 @@ func commandExplore(pageConfig *pageConfig, args []string) error {
 	for _, n := range pokemonNames {
 		fmt.Println(n)
 	}
+
+	fmt.Println("\nTry to 'catch' a pokémon...")
 
 	return nil
 }
@@ -186,7 +201,7 @@ func commandCatch(pageConfig *pageConfig, args []string) error {
 		fmt.Printf("%v escaped!\n", pokemon.Name)
 	} else {
 		pageConfig.Pokedex.caughtPokemon[pokemon.Name] = pokemon
-		fmt.Printf("%v was caught!\n", pokemon.Name)
+		fmt.Printf("%v was caught! Check your 'pokedex'\n", pokemon.Name)
 	}
 
 	return nil
@@ -194,7 +209,7 @@ func commandCatch(pageConfig *pageConfig, args []string) error {
 
 func commandInspect(pageConfig *pageConfig, args []string) error {
 	if len(args) == 0 {
-		return errors.New("catch requires a pokémon name!")
+		return errors.New("inspect requires a pokémon name!")
 	}
 
 	pokemon, ok := pageConfig.Pokedex.caughtPokemon[args[0]]
@@ -213,6 +228,23 @@ func commandInspect(pageConfig *pageConfig, args []string) error {
 	for _, t := range pokemon.Types {
 		fmt.Printf(" - %v\n", t.Type.Name)
 	}
+
+	return nil
+}
+
+func commandPokedex(pageConfig *pageConfig, args []string) error {
+	fmt.Println("Your pokédex:")
+
+	if len(pageConfig.Pokedex.caughtPokemon) == 0 {
+		fmt.Println("There's nothing here yet! Try catching some pokémon!")
+		return nil
+	}
+
+	for _, p := range pageConfig.Pokedex.caughtPokemon {
+		fmt.Println(" -", p.Name)
+	}
+
+	fmt.Println("\nWhy not 'inspect' a pokémon...")
 
 	return nil
 }
