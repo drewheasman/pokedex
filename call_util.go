@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,7 +22,7 @@ func cacheOrCall(cache *pokecache.Cache, url *url.URL) ([]byte, error) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return data, fmt.Errorf(resp.Status)
+			return data, errors.New(resp.Status + " response was not ok")
 		}
 
 		data, err = io.ReadAll(resp.Body)
